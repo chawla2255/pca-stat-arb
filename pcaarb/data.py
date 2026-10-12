@@ -24,6 +24,7 @@ UNIVERSE = [
 ]
 START, END = "2012-01-01", "2025-09-30"
 CACHE = Path(__file__).resolve().parent.parent / "data" / "prices.csv.gz"
+BENCH_CACHE = CACHE.with_name("spy.csv.gz")
 
 
 def download(tickers=UNIVERSE, start=START, end=END) -> pd.DataFrame:
@@ -46,3 +47,15 @@ def load_prices(refresh: bool = False) -> pd.DataFrame:
 def daily_returns(prices: pd.DataFrame) -> pd.DataFrame:
     """Simple daily returns; the first row is dropped."""
     return prices.pct_change(fill_method=None).iloc[1:]
+
+
+def load_benchmark(refresh: bool = False) -> pd.Series:
+    """Daily returns of SPY (S&P 500 ETF), used only to measure market exposure."""
+    if refresh or not BENCH_CACHE.exists():
+        import yfinance as yf
+
+        BENCH_CACHE.parent.mkdir(exist_ok=True)
+        raw = yf.download("SPY", start=START, end=END, auto_adjust=True, progress=False)
+        raw["Close"].squeeze().rename("SPY").to_csv(BENCH_CACHE)
+    spy = pd.read_csv(BENCH_CACHE, index_col=0, parse_dates=True).squeeze("columns")
+    return spy.pct_change(fill_method=None).iloc[1:]

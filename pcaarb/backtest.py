@@ -29,6 +29,8 @@ class Config:
     max_reversion_days: float = 30.0
     cost_bps: float = 5.0        # one-way cost per dollar traded, in basis points
     thresholds: Thresholds = field(default_factory=Thresholds)
+    rebalance_every: int = 1     # trade only every N days (1 = daily)
+    smoothing: float = 1.0       # move this fraction of the way to the target each trade (1 = all)
 
 
 @dataclass
@@ -46,7 +48,9 @@ def run(returns: pd.DataFrame, cfg: Config = Config()) -> Result:
     col = {t: i for i, t in enumerate(tickers)}
     n = len(tickers)
     states = np.zeros(n)
+    held = np.zeros(n)
     rows, dates, longs, shorts = [], [], [], []
+    step = 0
 
     for t in range(cfg.pca_window - 1, len(returns) - 1):
         window = returns.iloc[t - cfg.pca_window + 1 : t + 1]
@@ -54,6 +58,13 @@ def run(returns: pd.DataFrame, cfg: Config = Config()) -> Result:
         idx = np.array([col[c] for c in model.tickers])
         est = window[model.tickers].iloc[-cfg.estimation :]
         sc = s_scores(est.to_numpy(), model.factor_returns(est).to_numpy(), cfg.max_reversion_days)
+        if step % cfg.rebalance_every:
+            rows.append(held.copy())
+            dates.append(returns.index[t])
+            longs.append(int((states == 1).sum()))
+            shorts.append(int((states == -1).sum()))
+            step += 1
+            continue
 
         s = np.full(n, np.nan)
         s[idx] = sc.s
@@ -68,8 +79,12 @@ def run(returns: pd.DataFrame, cfg: Config = Config()) -> Result:
         gross_exposure = np.abs(w).sum()
         if gross_exposure > 0:
             w = w / gross_exposure
+        # Turnover control: trade only on rebalance days, and only part of the way to the target.
+        if step % cfg.rebalance_every == 0:
+            held = held + cfg.smoothing * (w - held)
+        step += 1
 
-        rows.append(w)
+        rows.append(held.copy())
         dates.append(returns.index[t])
         longs.append(int((states == 1).sum()))
         shorts.append(int((states == -1).sum()))

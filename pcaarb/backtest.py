@@ -43,7 +43,10 @@ class Result:
     n_short: pd.Series
 
 
-def run(returns: pd.DataFrame, cfg: Config = Config()) -> Result:
+def run(returns: pd.DataFrame, cfg: Config = Config(), exposure: pd.Series | None = None) -> Result:
+    """`exposure`, if given, scales the target book on each close (indexed by date, known at
+    that close; missing dates count as 1). It is applied before turnover smoothing, so a
+    gate that switches the book off still pays the cost of getting out."""
     tickers = list(returns.columns)
     col = {t: i for i, t in enumerate(tickers)}
     n = len(tickers)
@@ -79,6 +82,8 @@ def run(returns: pd.DataFrame, cfg: Config = Config()) -> Result:
         gross_exposure = np.abs(w).sum()
         if gross_exposure > 0:
             w = w / gross_exposure
+        if exposure is not None:
+            w = w * float(exposure.get(returns.index[t], 1.0))
         # Turnover control: trade only on rebalance days, and only part of the way to the target.
         if step % cfg.rebalance_every == 0:
             held = held + cfg.smoothing * (w - held)

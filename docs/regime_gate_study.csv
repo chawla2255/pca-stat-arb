@@ -1,0 +1,9 @@
+candidate,period,gross Sharpe,net Sharpe,net annual return,annual volatility,max drawdown,beta,daily turnover,avg gross exposure
+A. no gate (turnover choice B),dev 2013-2019,0.7229,0.1016,0.0030,0.0299,-0.0802,0.0133,0.1475,0.8885
+A. no gate (turnover choice B),test 2020-2025,0.1596,-0.2760,-0.0119,0.0432,-0.1109,0.0271,0.1492,0.8934
+B. flat when Pr(turbulent) > 0.5,dev 2013-2019,0.8454,0.2037,0.0054,0.0263,-0.0667,0.0057,0.1337,0.7686
+B. flat when Pr(turbulent) > 0.5,test 2020-2025,0.2485,-0.1806,-0.0056,0.0309,-0.1051,0.0021,0.1050,0.5740
+C. scale by Pr(calm),dev 2013-2019,0.8384,0.1987,0.0051,0.0256,-0.0652,0.0062,0.1300,0.7583
+C. scale by Pr(calm),test 2020-2025,0.2428,-0.1863,-0.0056,0.0300,-0.0979,0.0020,0.1020,0.5776
+D. trade only when Pr(turbulent) > 0.5,dev 2013-2019,-0.0423,-0.2951,-0.0039,0.0133,-0.0453,0.0076,0.0266,0.1241
+D. trade only when Pr(turbulent) > 0.5,test 2020-2025,-0.0276,-0.3131,-0.0088,0.0281,-0.0796,0.0251,0.0637,0.3248

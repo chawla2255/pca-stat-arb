@@ -42,3 +42,43 @@ def test_metrics_on_a_constant_series():
     m = metrics(pd.Series([0.001] * 252))
     assert np.isclose(m["annual return"], 0.252)
     assert m["max drawdown"] == 0
+
+
+def _toy_returns(n_days=320, n_stocks=12, seed=3):
+    import numpy as np
+    import pandas as pd
+    rng = np.random.default_rng(seed)
+    idx = pd.bdate_range("2015-01-01", periods=n_days)
+    market = rng.normal(0, 0.01, n_days)
+    noise = rng.normal(0, 0.01, (n_days, n_stocks))
+    return pd.DataFrame(market[:, None] + noise, index=idx, columns=[f"S{i}" for i in range(n_stocks)])
+
+
+def test_exposure_of_one_reproduces_the_baseline():
+    import numpy as np
+    import pandas as pd
+    from pcaarb.backtest import Config, run
+    r = _toy_returns()
+    cfg = Config(pca_window=120, estimation=40, k=2)
+    base = run(r, cfg)
+    ones = run(r, cfg, exposure=pd.Series(1.0, index=r.index))
+    np.testing.assert_allclose(base.weights.to_numpy(), ones.weights.to_numpy())
+    np.testing.assert_allclose(base.net.to_numpy(), ones.net.to_numpy())
+
+
+def test_zero_exposure_flattens_the_book_and_uses_only_past_values():
+    import numpy as np
+    import pandas as pd
+    from pcaarb.backtest import Config, run
+    r = _toy_returns()
+    cfg = Config(pca_window=120, estimation=40, k=2)
+    gate = pd.Series(1.0, index=r.index)
+    cut = r.index[250]
+    gate[gate.index >= cut] = 0.0
+    res = run(r, cfg, exposure=gate)
+    after = res.weights.loc[res.weights.index >= cut]
+    assert np.allclose(after.to_numpy(), 0.0)
+    # weights decided before the gate switches off are unchanged
+    base = run(r, cfg)
+    before = res.weights.index < cut
+    np.testing.assert_allclose(res.weights[before].to_numpy(), base.weights[before].to_numpy())

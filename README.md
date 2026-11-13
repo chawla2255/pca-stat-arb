@@ -86,6 +86,40 @@ bias, so it is reported, not chosen.
 The raw edge itself fades: gross Sharpe falls from 0.84 (2013 to 2019) to 0.19 (2020 to 2025),
 consistent with the crowding and decay of residual-reversal strategies in liquid large caps.
 
+## Extension: does the edge depend on the market regime?
+
+My own follow-up question, using the hidden Markov model from my
+[regime-switching-vol](https://github.com/chawla2255/regime-switching-vol) project. That model
+was fitted on SPY 2000-2014 and frozen; its **filtered** turbulent-regime probability on day t
+uses returns up to that close only, so it can set that close's weights without look-ahead.
+Everything below was fixed before looking at results (`scripts/regime_gate_study.py`):
+the base is turnover choice B, the four candidates are listed in the table, the choice uses
+2013-2019 only, and 2020-2025 is reported for all of them.
+
+![Regime gate](docs/regime_gate.png)
+
+| Candidate (5 bp costs) | Net Sharpe 2013-19 (choose) | Net Sharpe 2020-25 (test) | Gross Sharpe 2020-25 | Daily turnover 2020-25 |
+| --- | --- | --- | --- | --- |
+| A. No gate | 0.10 | −0.28 | 0.16 | 15% |
+| **B. Flat when Pr(turbulent) > 0.5 (chosen)** | **0.20** | **−0.18** | 0.25 | 11% |
+| C. Scale by Pr(calm) | 0.20 | −0.19 | 0.24 | 10% |
+| D. Trade only when turbulent (opposite hypothesis) | −0.30 | −0.31 | −0.03 | 6% |
+
+**Where the edge lives.** The base strategy's gross Sharpe is 0.94 on calm days and −0.30 on
+turbulent days in 2013-2019, and 0.41 vs −0.19 out of sample: the same sign in both periods.
+The difference is not statistically significant, though (Newey-West t = −1.1 over 2013-2025),
+so this is evidence, not proof (`docs/regime_edge_by_regime.csv`).
+
+**What the gate buys.** Out of sample it raises gross Sharpe from 0.16 to 0.25, cuts turnover
+by 30% and brings beta from 0.03 to 0.00, but at 5 bp the strategy still loses money. As a
+robustness check (not used for any choice), gating at thresholds of 0.3, 0.5 and 0.7 beats no
+gate in both periods at both 2 bp and 5 bp; at 2 bp the gated book is slightly positive out of
+sample (net Sharpe 0.08 vs −0.02) (`docs/regime_gate_sensitivity.csv`).
+
+**Reading.** Residual reversal works when correlations are stable and fails when the market
+factor takes over, which is what the turbulent regime picks up. A regime filter removes the
+worst periods but cannot create an edge that costs have already eaten.
+
 ## Limitations
 
 - **Survivorship bias.** The universe is today's large caps, so stocks that failed or were
